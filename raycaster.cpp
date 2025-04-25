@@ -54,8 +54,8 @@ constexpr std::array<std::array<int, MAPWIDTH>, MAPHEIGHT> WORLDMAP {{
 int main(int argc, char* argv[])
 {
   Point<double> player { 22, 12 };
-  Point<double> DirVector { -1, 0 };
-  Point<double> PlaneVector { 0, 0.66 };
+  Point<double> dirVector { -1, 0 };
+  Point<double> planeVector { 0, 0.66 };
 
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer = nullptr;
@@ -89,12 +89,12 @@ int main(int argc, char* argv[])
     {
       Point<double> rayDir {};
       Point<double> deltaDistance{};
-      point<double> sideDist{};
+      Point<double> sideDist{};
       Point<int>    map {};
       Point<int>    stepper {};
       double        perpWallDist {};
 
-      double offset = 2 * x std::static_cast<double>(SCREEN_WIDTH) -1;
+      double offset = 2 * x / static_cast<double>(SCREEN_WIDTH) -1;
 
       rayDir.x = dirVector.x + planeVector.x*offset;
       rayDir.y = dirVector.y + planeVector.y*offset;
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
       Tside sideHit {};
 
       // initializes sideDist and determines what the stepper is
-      if (raydir.x < 0)
+      if (rayDir.x < 0)
       {
         stepper.x = -1;
         sideDist.x = (player.x - map.x) * deltaDistance.x;
@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
         sideDist.x = (map.x + 1 - player.x) * deltaDistance.x;
       }
 
-      if (raydir.y < 0)
+      if (rayDir.y < 0)
       {
         stepper.y = -1;
         sideDist.y = (player.y - map.y) * deltaDistance.y;
@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
         if (WORLDMAP[map.x][map.y] > 0) hit = true;
       }
 
-      if (sideDist == NorthSouth)
+      if (sideHit == NorthSouth)
         perpWallDist = sideDist.x - deltaDistance.x;
       else
         perpWallDist = sideDist.y - deltaDistance.y;
