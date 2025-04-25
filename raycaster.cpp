@@ -149,6 +149,11 @@ int main(int argc, char* argv[])
         // check for collision
         if (WORLDMAP[map.x][map.y] > 0) hit = true;
       }
+
+      if (sideDist == NorthSouth)
+        perpWallDist = sideDist.x - deltaDistance.x;
+      else
+        perpWallDist = sideDist.y - deltaDistance.y;
     }
   }
 
