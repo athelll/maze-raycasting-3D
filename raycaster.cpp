@@ -1,20 +1,22 @@
 #include <SDL2/SDL.h>
 #include <iostream>
 #include <array>
+#include <cmath>
 
 constexpr int SCREEN_WIDTH = 640;
 constexpr int SCREEN_HEIGHT = 480;
 constexpr int MAPWIDTH = 24;
 constexpr int MAPHEIGHT = 24;
 
-enum class Tside {
-  left,
-  right,
+enum Tside {
+  EastWest,
+  NorthSouth,
 };
 
+template <typename T>
 struct Point {
-  double x {};
-  double y {};
+  T x {};
+  T y {};
 };
 
 constexpr int terminate ( std::string error ) {
@@ -46,14 +48,14 @@ constexpr std::array<std::array<int, MAPWIDTH>, MAPHEIGHT> WORLDMAP {{
   {{ 1,4,0,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }},
   {{ 1,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }},
   {{ 1,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }},
-  {{ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}}
+  {{ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 }}
 }};
 
 int main(int argc, char* argv[])
 {
-  Point player { 22, 12 };
-  Point DirVector { -1, 0 };
-  Point PlaneVector { 0, 0.66 };
+  Point<double> player { 22, 12 };
+  Point<double> DirVector { -1, 0 };
+  Point<double> PlaneVector { 0, 0.66 };
 
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer = nullptr;
@@ -85,15 +87,68 @@ int main(int argc, char* argv[])
 
     for (int x = 0; x < SCREEN_WIDTH; ++x)
     {
-      Point rayDir {};
-      Point deltaDistance{};
-      Tside side {};
-      bool hit {};
+      Point<double> rayDir {};
+      Point<double> deltaDistance{};
+      point<double> sideDist{};
+      Point<int>    map {};
+      Point<int>    stepper {};
+      double        perpWallDist {};
+
       double offset = 2 * x std::static_cast<double>(SCREEN_WIDTH) -1;
 
       rayDir.x = dirVector.x + planeVector.x*offset;
       rayDir.y = dirVector.y + planeVector.y*offset;
 
+      deltaDistance.x = std::abs( 1 / rayDir.x );
+      deltaDistance.y = std::abs( 1 / rayDir.y );
+
+      map.x = static_cast<int>(player.x);
+      map.y = static_cast<int>(player.y);
+
+      bool hit = false;
+      Tside sideHit {};
+
+      // initializes sideDist and determines what the stepper is
+      if (raydir.x < 0)
+      {
+        stepper.x = -1;
+        sideDist.x = (player.x - map.x) * deltaDistance.x;
+      } 
+      else
+      {
+        stepper.x = +1;
+        sideDist.x = (map.x + 1 - player.x) * deltaDistance.x;
+      }
+
+      if (raydir.y < 0)
+      {
+        stepper.y = -1;
+        sideDist.y = (player.y - map.y) * deltaDistance.y;
+      }
+      else
+      {
+        stepper.y = +1;
+        sideDist.y = (player.y + 1 - player.y) * deltaDistance.y;
+      }
+      
+      // perform DDA
+      while(hit == false)
+      {
+        if (sideDist.x < sideDist.y)
+        {
+          sideDist.x += deltaDistance.x;
+          map.x += stepper.x;
+          sideHit = NorthSouth;
+        }
+        else
+        {          
+          sideDist.y += deltaDistance.y;
+          map.y += stepper.y;
+          sideHit = EastWest;
+        }
+        // check for collision
+        if (WORLDMAP[map.x][map.y] > 0) hit = true;
+      }
     }
   }
 
