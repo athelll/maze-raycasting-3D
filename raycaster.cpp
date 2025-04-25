@@ -2,6 +2,7 @@
 #include <iostream>
 #include <array>
 #include <cmath>
+#include <cstdint>
 
 constexpr int SCREEN_WIDTH = 640;
 constexpr int SCREEN_HEIGHT = 480;
@@ -22,6 +23,27 @@ struct Point {
 constexpr int terminate ( std::string error ) {
   std::cerr << error << SDL_GetError();
   return 1;
+}
+
+struct Color {
+  uint8_t r, g, b, a;
+};
+
+namespace colors {
+  constexpr Color red   {255, 0, 0, 255};
+  constexpr Color green {0, 255, 0, 255};
+  constexpr Color blue  {0, 0, 255, 255};
+  constexpr Color white {255, 255, 255, 255};
+  constexpr Color yellow{255, 255, 0, 255};
+}
+
+void vertline(SDL_Renderer& renderer, int x, int startY, int endY, Color color)
+{
+  uint8_t r = color.r; uint8_t g = color.g;
+  uint8_t b = color.b; uint8_t a = color.a;
+  SDL_SetRenderDrawColor(&renderer,r, g, b, a);
+  SDL_RenderDrawLine(&renderer, x, startY, x, endY);
+  SDL_RenderPresent(&renderer);
 }
 
 constexpr std::array<std::array<int, MAPWIDTH>, MAPHEIGHT> WORLDMAP {{
@@ -50,6 +72,18 @@ constexpr std::array<std::array<int, MAPWIDTH>, MAPHEIGHT> WORLDMAP {{
   {{ 1,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }},
   {{ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 }}
 }};
+
+Color colorHit(Point<int>& map)
+{
+  switch(WORLDMAP[map.x][map.y])
+  {
+    case 1: return colors::red;
+    case 2: return colors::green;
+    case 3: return colors::blue;
+    case 4: return colors::white;
+    default: return colors::yellow;
+  }
+}
 
 int main(int argc, char* argv[])
 {
@@ -154,6 +188,20 @@ int main(int argc, char* argv[])
         perpWallDist = sideDist.x - deltaDistance.x;
       else
         perpWallDist = sideDist.y - deltaDistance.y;
+
+      int lineHeight  = static_cast<int>(SCREEN_HEIGHT / perpWallDist);
+      int drawStart   =   SCREEN_HEIGHT / 2 - lineHeight / 2;
+      if (drawStart < 0) drawStart = 0;
+      int drawEnd     =   SCREEN_HEIGHT / 2 + lineHeight / 2;
+      if (drawEnd < 0) drawEnd = 0;
+
+      // draw line
+      Color hitColor = colorHit(map);
+      if (sideHit == EastWest) {
+        hitColor.r = hitColor.r / 2; hitColor.g = hitColor.g / 2;
+        hitColor.b = hitColor.b / 2; hitColor.a = hitColor.a / 2; 
+      }
+      vertline(*renderer, x, drawStart, drawEnd, hitColor );
     }
   }
 
