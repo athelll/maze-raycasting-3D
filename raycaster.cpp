@@ -7,6 +7,11 @@ constexpr int SCREEN_HEIGHT = 480;
 constexpr int MAPWIDTH = 24;
 constexpr int MAPHEIGHT = 24;
 
+enum class Tside {
+  left,
+  right,
+};
+
 struct Point {
   double x {};
   double y {};
@@ -80,10 +85,15 @@ int main(int argc, char* argv[])
 
     for (int x = 0; x < SCREEN_WIDTH; ++x)
     {
-      double offset = 2 * x std::static_cast<double>(SCREEN_WIDTH) -1;
       Point rayDir {};
+      Point deltaDistance{};
+      Tside side {};
+      bool hit {};
+      double offset = 2 * x std::static_cast<double>(SCREEN_WIDTH) -1;
+
       rayDir.x = dirVector.x + planeVector.x*offset;
       rayDir.y = dirVector.y + planeVector.y*offset;
+
     }
   }
 
