@@ -44,12 +44,13 @@ void vertline(SDL_Renderer& renderer, int x, int startY, int endY, Color color)
   uint8_t b = color.b; uint8_t a = color.a;
   SDL_SetRenderDrawColor(&renderer,r, g, b, a);
   SDL_RenderDrawLine(&renderer, x, startY, x, endY);
+  //SDL_RenderPresent(&renderer);
 }
 
 void clearScreen(SDL_Renderer& renderer)
 {
   SDL_SetRenderDrawColor(&renderer, 0, 0, 0, 255);
-  SDL_RenderClear(&renderer);   
+  SDL_RenderClear(&renderer); 
 }
 
 constexpr std::array<std::array<int, MAPWIDTH>, MAPHEIGHT> WORLDMAP {{
@@ -105,8 +106,8 @@ int main(int argc, char* argv[])
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer = nullptr;
 
-  double currentTime = 0;
-  double oldTime = 0;
+  double currentTime;
+  double oldTime;
 
   if (SDL_Init ( SDL_INIT_VIDEO ) < 0)
     return terminate("SDL could not be initilaized. SDL ERROR: ");
@@ -124,11 +125,12 @@ int main(int argc, char* argv[])
   if (renderer == nullptr) return terminate("Renderer could not be initialized. SDL ERROR: ");
   
   // game loop
-  SDL_Event event; bool running = true;
+  SDL_Event event;
+  bool running = true;
+  oldTime = static_cast<double>(SDL_GetTicks()) / 1000;
+
   while ( running ) 
   {
-
-
     for (int x = 0; x < SCREEN_WIDTH; ++x)
     {
       Point<double> rayDir {};
@@ -212,19 +214,21 @@ int main(int argc, char* argv[])
         hitColor.r = hitColor.r / 2; hitColor.g = hitColor.g / 2;
         hitColor.b = hitColor.b / 2; hitColor.a = hitColor.a / 2; 
       }
-      vertline(*renderer, x, drawStart, drawEnd, hitColor );
+      vertline( *renderer, x, drawStart, drawEnd, hitColor );
     }
-
-
-    oldTime = currentTime;
-    currentTime = static_cast<double>(SDL_GetTicks()) / 1000;
-    double frameTime = currentTime - oldTime; // time elapsed in seconds for current frame.
-    double FPS = 1 / frameTime;
+    // update window
     SDL_RenderPresent(renderer);
     clearScreen(*renderer);
 
+    currentTime = static_cast<double>(SDL_GetTicks()) / 1000;
+    double frameTime = currentTime - oldTime; // time elapsed in seconds for current frame.
+    double FPS = 1 / frameTime;
+    std::cout << "FPS, OLDTIME, CURRENTTIME "<< FPS << " "<< oldTime << " " << currentTime << '\n';
+    SDL_Delay( 15 );  // to prevent too quick rendering which can cause SDL to throttle and lag
+    oldTime = currentTime;
+
     // speed modifiers
-    double movSpeed = frameTime * 200.0;
+    double movSpeed = frameTime * 5.0;
     double rotSpeed = frameTime * 3.0;
 
     // event and imput handler
