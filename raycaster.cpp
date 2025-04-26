@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <iomanip>
 
 constexpr int SCREEN_WIDTH = 640;
 constexpr int SCREEN_HEIGHT = 480;
@@ -43,7 +44,12 @@ void vertline(SDL_Renderer& renderer, int x, int startY, int endY, Color color)
   uint8_t b = color.b; uint8_t a = color.a;
   SDL_SetRenderDrawColor(&renderer,r, g, b, a);
   SDL_RenderDrawLine(&renderer, x, startY, x, endY);
-  SDL_RenderPresent(&renderer);
+}
+
+void clearScreen(SDL_Renderer& renderer)
+{
+  SDL_SetRenderDrawColor(&renderer, 0, 0, 0, 255);
+  SDL_RenderClear(&renderer);   
 }
 
 constexpr std::array<std::array<int, MAPWIDTH>, MAPHEIGHT> WORLDMAP {{
@@ -85,6 +91,11 @@ Color colorHit(Point<int>& map)
   }
 }
 
+int inter(double D)
+{
+  return static_cast<int>(D);
+} 
+
 int main(int argc, char* argv[])
 {
   Point<double> player { 22, 12 };
@@ -93,6 +104,9 @@ int main(int argc, char* argv[])
 
   SDL_Window* window = nullptr;
   SDL_Renderer* renderer = nullptr;
+
+  double currentTime = 0;
+  double oldTime = 0;
 
   if (SDL_Init ( SDL_INIT_VIDEO ) < 0)
     return terminate("SDL could not be initilaized. SDL ERROR: ");
@@ -109,15 +123,11 @@ int main(int argc, char* argv[])
   renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED );
   if (renderer == nullptr) return terminate("Renderer could not be initialized. SDL ERROR: ");
   
-  // main loop
+  // game loop
   SDL_Event event; bool running = true;
   while ( running ) 
   {
-    while ( SDL_PollEvent ( &event ) )
-    { 
-      if ( event.type == SDL_QUIT ) 
-        running = false; 
-    }
+
 
     for (int x = 0; x < SCREEN_WIDTH; ++x)
     {
@@ -128,6 +138,7 @@ int main(int argc, char* argv[])
       Point<int>    stepper {};
       double        perpWallDist {};
 
+      // linear normalization of x pixel slices to range -1 to +1
       double offset = 2 * x / static_cast<double>(SCREEN_WIDTH) -1;
 
       rayDir.x = dirVector.x + planeVector.x*offset;
@@ -141,7 +152,7 @@ int main(int argc, char* argv[])
 
       bool hit = false;
       Tside sideHit {};
-
+ 
       // initializes sideDist and determines what the stepper is
       if (rayDir.x < 0)
       {
@@ -203,6 +214,46 @@ int main(int argc, char* argv[])
       }
       vertline(*renderer, x, drawStart, drawEnd, hitColor );
     }
+
+
+    oldTime = currentTime;
+    currentTime = static_cast<double>(SDL_GetTicks()) / 1000;
+    double frameTime = currentTime - oldTime; // time elapsed in seconds for current frame.
+    double FPS = 1 / frameTime;
+    SDL_RenderPresent(renderer);
+    clearScreen(*renderer);
+
+    // speed modifiers
+    double movSpeed = frameTime * 200.0;
+    double rotSpeed = frameTime * 3.0;
+
+    // event and imput handler
+    while ( SDL_PollEvent ( &event ) )
+    {
+      if ( event.type == SDL_QUIT )
+        running = false;
+
+      if ( event.type == SDL_KEYDOWN )
+      {
+        switch (event.key.keysym.sym)
+        {
+        case SDLK_UP:
+          if ( WORLDMAP[inter(player.x + dirVector.x * movSpeed)][inter(player.y)] == 0 )
+            player.x += dirVector.x * movSpeed;
+          if ( WORLDMAP[inter(player.x)][inter(player.y + dirVector.y*movSpeed)] == 0 )
+            player.y += dirVector.y * movSpeed;
+          break;
+         
+        case SDLK_DOWN:
+          if ( WORLDMAP[inter(player.x - dirVector.x * movSpeed)][inter(player.y)] == 0 )
+            player.x -= dirVector.x * movSpeed;
+          if ( WORLDMAP[inter(player.x)][inter(player.y - dirVector.y*movSpeed)] == 0 )
+            player.y -= dirVector.y * movSpeed;
+          break;
+        }
+      }
+    }
+    std::cout << player.x << " " << player.y << '\n';
   }
 
   SDL_DestroyRenderer( renderer );
