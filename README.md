@@ -10,3 +10,7 @@ after excute the executable:
 ```bash
 ./raycaster
 ```
+raycaster runs at about 60FPS on average (average has not been measured but from logs thats what i observed)
+
+#### Current issues with raycaster:
+1) At some angles, navigating the player forward or backwards causes some sudden frame skip-ish effects although rotation works, to my standards, somewhat flawlessly
