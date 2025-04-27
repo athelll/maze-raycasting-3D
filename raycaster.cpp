@@ -4,12 +4,12 @@
 #include <cmath>
 #include <cstdint>
 #include <iomanip>
-#include <math.h>
 
 constexpr int SCREEN_WIDTH = 640;
 constexpr int SCREEN_HEIGHT = 480;
 constexpr int MAPWIDTH = 24;
 constexpr int MAPHEIGHT = 24;
+constexpr int LAG_BUFFER = 15;
 
 enum Tside {
   EastWest,
@@ -32,11 +32,11 @@ struct Color {
 };
 
 namespace colors {
-  constexpr Color red   {255, 0, 0, 255};
-  constexpr Color green {0, 255, 0, 255};
-  constexpr Color blue  {0, 0, 255, 255};
-  constexpr Color white {255, 255, 255, 255};
-  constexpr Color yellow{255, 255, 0, 255};
+  constexpr Color red    {255, 0, 0, 255};
+  constexpr Color green  {0, 255, 0, 255};
+  constexpr Color blue   {0, 0, 255, 255};
+  constexpr Color white  {255, 255, 255, 255};
+  constexpr Color yellow {255, 255, 0, 255};
 }
 
 void vertline(SDL_Renderer& renderer, int x, int startY, int endY, Color color)
@@ -45,7 +45,6 @@ void vertline(SDL_Renderer& renderer, int x, int startY, int endY, Color color)
   uint8_t b = color.b; uint8_t a = color.a;
   SDL_SetRenderDrawColor(&renderer,r, g, b, a);
   SDL_RenderDrawLine(&renderer, x, startY, x, endY);
-  //SDL_RenderPresent(&renderer); fucking bug
 }
 
 void clearScreen(SDL_Renderer& renderer)
@@ -85,10 +84,10 @@ Color colorHit(Point<int>& map)
 {
   switch(WORLDMAP[map.x][map.y])
   {
-    case 1: return colors::red;
-    case 2: return colors::green;
-    case 3: return colors::blue;
-    case 4: return colors::white;
+    case 1:  return colors::red;
+    case 2:  return colors::green;
+    case 3:  return colors::blue;
+    case 4:  return colors::white;
     default: return colors::yellow;
   }
 }
@@ -101,18 +100,16 @@ int inter(double D)
 int main(int argc, char* argv[])
 {
   Point<double> player { 22, 12 };
-  Point<double> dirVector { -1.0, 0.0 };
-  Point<double> planeVector { 0.0, 0.66 };
+  Point<double> dirVector { -1, 0 };
+  Point<double> planeVector { 0, 0.66 };
 
-  SDL_Window* window = nullptr;
-  SDL_Renderer* renderer = nullptr;
-
-  double currentTime;
-  double oldTime;
+  double currentTime {};
+  double oldTime {};
 
   if (SDL_Init ( SDL_INIT_VIDEO ) < 0)
     return terminate("SDL could not be initilaized. SDL ERROR: ");
 
+  SDL_Window* window = nullptr;
   window = SDL_CreateWindow(
     "Raycaster",
     SDL_WINDOWPOS_UNDEFINED,
@@ -123,16 +120,15 @@ int main(int argc, char* argv[])
   if (window == nullptr) 
     return terminate("Window could not be initialized. SDL ERROR: ");
 
+  SDL_Renderer* renderer = nullptr;
   renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED );
   if (renderer == nullptr) 
     return terminate("Renderer could not be initialized. SDL ERROR: ");
   
-  // game loop
   SDL_Event event;
   bool running = true;
   oldTime = static_cast<double>(SDL_GetTicks()) / 1000;
 
-  int counter = 0; 
   while ( running )
   {
     for (int x = 0; x < SCREEN_WIDTH; ++x)
@@ -144,7 +140,6 @@ int main(int argc, char* argv[])
       Point<int>    stepper {};
       double        perpWallDist {};
 
-      // linear normalization of x pixel slices to range -1 to +1
       double offset = 2 * x / static_cast<double>(SCREEN_WIDTH) -1;
 
       rayDir.x = dirVector.x + planeVector.x*offset;
@@ -159,45 +154,32 @@ int main(int argc, char* argv[])
       bool hit = false;
       Tside sideHit {};
  
-      // initializes sideDist and determines what the stepper is
-      if (rayDir.x < 0)
-      {
+      if (rayDir.x < 0) {
         stepper.x = -1;
         sideDist.x = (player.x - map.x) * deltaDistance.x;
-      } 
-      else
-      {
+      } else {
         stepper.x = +1;
         sideDist.x = (map.x + 1 - player.x) * deltaDistance.x;
       }
-
-      if (rayDir.y < 0)
-      {
+      if (rayDir.y < 0) {
         stepper.y = -1;
         sideDist.y = (player.y - map.y) * deltaDistance.y;
-      }
-      else
-      {
+      } else {
         stepper.y = +1;
         sideDist.y = (player.y + 1 - player.y) * deltaDistance.y;
       }
       
-      // perform DDA
       while(hit == false)
       {
-        if (sideDist.x < sideDist.y)
-        {
+        if (sideDist.x < sideDist.y) {
           sideDist.x += deltaDistance.x;
           map.x += stepper.x;
           sideHit = NorthSouth;
-        }
-        else
-        {          
+        } else {          
           sideDist.y += deltaDistance.y;
           map.y += stepper.y;
           sideHit = EastWest;
         }
-        // check for collision
         if (WORLDMAP[map.x][map.y] > 0) hit = true;
       }
 
@@ -207,12 +189,12 @@ int main(int argc, char* argv[])
         perpWallDist = sideDist.y - deltaDistance.y;
 
       int lineHeight  = static_cast<int>(SCREEN_HEIGHT / perpWallDist);
+
       int drawStart   =   SCREEN_HEIGHT / 2 - lineHeight / 2;
       if (drawStart < 0) drawStart = 0;
       int drawEnd     =   SCREEN_HEIGHT / 2 + lineHeight / 2;
       if (drawEnd < 0) drawEnd = 0;
 
-      // draw line
       Color hitColor = colorHit(map);
       if (sideHit == EastWest) {
         hitColor.r = hitColor.r / 2; hitColor.g = hitColor.g / 2;
@@ -220,24 +202,17 @@ int main(int argc, char* argv[])
       }
       vertline( *renderer, x, drawStart, drawEnd, hitColor );
     }
-    // update window
     SDL_RenderPresent(renderer);
     clearScreen(*renderer);
 
     currentTime = static_cast<double>(SDL_GetTicks()) / 1000;
-    double frameTime = currentTime - oldTime; // time elapsed in seconds for current frame.
-    double FPS = 1 / frameTime;
-    std::cout << "FPS->"<< FPS << '\n';
-    SDL_Delay( 15 );  // to prevent too quick rendering which causes SDL to throttle and lag
-    // SDL_Delay( 2000 );  // to prevent too quick rendering which causes SDL to throttle and lag
+    double frameTime = currentTime - oldTime; double FPS = 1 / frameTime;
+    SDL_Delay( LAG_BUFFER );
     oldTime = currentTime;
 
-    // speed modifiers
     double movSpeed = frameTime * 5.0;
     double rotSpeed = frameTime * 3.0;
-/*     double rotSpeed = 3.0; */
 
-    // event and imput handler
     while ( SDL_PollEvent ( &event ) )
     {
       if ( event.type == SDL_QUIT )
@@ -260,8 +235,8 @@ int main(int argc, char* argv[])
           if ( WORLDMAP[inter(player.x)][inter(player.y - dirVector.y*movSpeed)] == false )
             player.y -= dirVector.y * movSpeed;
           break;
+
         case SDLK_RIGHT: {
-          // to rotate player: dirVector and planeVector would have to be rotated
           double cosAngle = std::cos(-rotSpeed);
           double sinAngle = std::sin(-rotSpeed);
 
@@ -269,26 +244,12 @@ int main(int argc, char* argv[])
           dirVector.x = dirVector.x * cosAngle - dirVector.y * sinAngle;
           dirVector.y = oldDirVecX  * sinAngle + dirVector.y * cosAngle;
 
-          // normalize direction Vector
-          // double dmagnitude = std::sqrt(dirVector.x * dirVector.x + dirVector.y + dirVector.y);
-          // if (dmagnitude > 1e-6 )
-          // {
-          //   dirVector.x /= dmagnitude;
-          //   dirVector.y /= dmagnitude;
-          // }
           double oldPlaneVecX = planeVector.x;
           planeVector.x = planeVector.x * cosAngle - planeVector.y * sinAngle;
           planeVector.y = oldPlaneVecX  * sinAngle + planeVector.y * cosAngle;
-
-          // double pmagnitude = std::sqrt(planeVector.x * planeVector.x + planeVector.y + planeVector.y);
-          // if (pmagnitude > 1e-6  )
-          // {
-          //   planeVector.x /= pmagnitude * 0.66;
-          //   planeVector.y /= pmagnitude * 0.66;
-          // }
-          // counter++;
           }
           break;
+
         case SDLK_LEFT: {
           double cosAngle = std::cos(rotSpeed);
           double sinAngle = std::sin(rotSpeed);
@@ -297,35 +258,20 @@ int main(int argc, char* argv[])
           dirVector.x = dirVector.x * cosAngle - dirVector.y * sinAngle;
           dirVector.y = oldDirVecX  * sinAngle + dirVector.y * cosAngle;
 
-          // double dmagnitude = std::sqrt(dirVector.x * dirVector.x + dirVector.y + dirVector.y);
-          // if (dmagnitude > 1e-6)
-          // {
-          //   dirVector.x /= dmagnitude;
-          //   dirVector.y /= dmagnitude;
-          // }
-
           double oldPlaneVecX = planeVector.x;
           planeVector.x = planeVector.x * cosAngle - planeVector.y * sinAngle;
           planeVector.y = oldPlaneVecX  * sinAngle + planeVector.y * cosAngle;
-
-          // double pmagnitude = std::sqrt(planeVector.x * planeVector.x + planeVector.y + planeVector.y);
-          // if (pmagnitude > 1e-6)
-          // {
-          //   planeVector.x /= pmagnitude * 0.66;
-          //   planeVector.y /= pmagnitude * 0.66;
-          // } 
-          // counter++;
           }
           break;
         }
       }
     }
+    std::cout << "FPS->"<< FPS << '\n';
     std::cout << "rotSpeed" <<rotSpeed << '\n';
     std::cout << "px-> "<< player.x << " py-> " << player.y << '\n';
     std::cout << "dirx-> " << dirVector.x << " diry-> " << dirVector.y << '\n';
     std::cout << "planex-> "<<planeVector.x << " planey-> " << planeVector.y << '\n';
     std::cout << '\n';
-    //  if (counter == 3) running = false;
   }
 
   SDL_DestroyRenderer( renderer );
